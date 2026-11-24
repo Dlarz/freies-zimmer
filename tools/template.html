@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#e4002b">
+<title>Freies Zimmer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Freies Zimmer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+/* VOICE quick everyday tool, one answer only
+   IDEA a red room door sign showing the one room to walk to
+   PICTURE the free room number drawn huge on the sign
+   COLOUR white ground, black ink, signal red sign; same at night on near-black
+   TYPE Archivo wide 800 for the number, Archivo for text
+   LAYOUT one centred column: where the class is, the sign, a short list of alternatives */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#0e0e0e);--ink:light-dark(#111,#f2f2f2);--mute:light-dark(#5a5a5a,#a9a9a9);--line:light-dark(#dcdcdc,#333);--red:#e4002b}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:17px/1.45 Archivo,"Helvetica Neue",Arial,sans-serif}
+main{max-width:520px;margin:0 auto;padding:22px 16px 28px;min-height:100%;display:flex;flex-direction:column;gap:18px}
+.when{color:var(--mute);font-weight:600;font-variant-numeric:tabular-nums}
+.where{font-size:clamp(24px,6.5vw,32px);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:4px 0 0}
+.sign{background:var(--red);color:#fff;padding:22px 22px 24px}
+.sign .k{font-size:16px;opacity:.92}
+.sign .n{font-size:clamp(110px,38vw,190px);line-height:.9;font-weight:800;font-stretch:118%;letter-spacing:-.03em;margin:6px 0 8px;font-variant-numeric:tabular-nums}
+.sign .f{font-size:21px;font-weight:700}
+.sign.off .n{font-size:clamp(48px,14vw,72px);line-height:1;margin:10px 0}
+.alt{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 14px;align-items:baseline}
+.alt span{color:var(--mute);font-size:15px;white-space:nowrap}
+.alt b{font-size:24px;font-weight:800;font-stretch:112%;word-spacing:.35em}
+.lab{font-size:15px;color:var(--mute);margin:0 0 4px}
+.foot{margin-top:auto;border-top:1px solid var(--line);padding-top:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;color:var(--mute);font-size:14px}
+select{font:inherit;font-size:16px;font-weight:700;min-height:44px;padding:6px 10px;border:2px solid var(--ink);background:var(--bg);color:var(--ink);border-radius:0}
+select:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+@media(prefers-reduced-motion:no-preference){.sign.anim .n{animation:up .35s ease-out}@keyframes up{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+<main>
+  <div><div class="when" id="when"></div><p class="where" id="where"></p></div>
+  <section class="sign" id="sign" aria-live="polite"></section>
+  <div id="alt"></div>
+  <div class="foot"><label for="cls">Klasse <select id="cls"></select></label><span>Zimmerplan vom 5.11.2026</span></div>
+</main>
+<script>
+{
+const D=/*DATA*/{};
+const T=[["7:50","8:35"],["8:40","9:25"],["9:45","10:30"],["10:35","11:20"],["11:25","12:10"],["12:20","13:05"],["13:10","13:55"],["14:00","14:45"],["14:55","15:40"],["15:45","16:30"],["16:35","17:20"]];
+const DAYN=["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
+const ROOMS=Object.keys(D.busy);
+const mins=s=>{const[a,b]=s.split(":");return a*60+ +b};
+const floorName=f=>f==="0"?"Erdgeschoss":f+". Stock";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let cls="G23v",last="";
+try{const v=localStorage.getItem("fz-cls");if(v&&D.cls[v])cls=v}catch(e){}
+
+function slotNow(){
+  const n=new Date(),wd=n.getDay(),t=n.getHours()*60+n.getMinutes();
+  if(wd<1||wd>5)return null;
+  for(let i=0;i<11;i++)if(t<mins(T[i][1]))return{d:wd-1,p:i};
+  return null;
+}
+
+function render(){
+  const n=new Date(),s=slotNow();
+  const hm=n.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
+  const sign=$("sign");
+  if(!s){
+    $("when").textContent=hm;
+    $("where").textContent="Jetzt ist keine Schule.";
+    sign.className="sign off";
+    sign.innerHTML=`<div class="k">Freies Zimmer</div><div class="n">Keine Schule</div><div class="f">Montag bis Freitag, 7:50 bis 17:20</div>`;
+    $("alt").innerHTML="";last="";return;
+  }
+  const {d,p}=s,base=d*11,C=D.cls[cls].s;
+  $("when").textContent=`${DAYN[d]} ${hm} · Lektion ${p+1} (${T[p][0]}–${T[p][1]})`;
+  // the class's current lesson block: same lesson continuing in the next periods
+  const cur=C[base+p];
+  let e=p;while(cur&&e+1<11&&C[base+e+1]===cur)e++;
+  const [shown,num]=cur?cur.split("|"):["",""];
+  const from=num||D.cls[cls].h;
+  $("where").textContent=cur?`${cls} ist in ${shown}`:`${cls} hat jetzt keine Lektion`;
+  const fl=from[0],fn=+from;
+  const freeAt=(r,i)=>D.busy[r][base+i]==="0";
+  let list=ROOMS.filter(r=>{for(let i=p;i<=e;i++)if(!freeAt(r,i))return false;return true});
+  if(!list.length)list=ROOMS.filter(r=>freeAt(r,p));
+  list.sort((a,b)=>Math.abs(a[0]-fl)-Math.abs(b[0]-fl)||Math.abs(+a%100-fn%100)-Math.abs(+b%100-fn%100)||a.localeCompare(b));
+  const until=r=>{let i=p;while(i+1<11&&freeAt(r,i+1))i++;return T[i][1]};
+  const best=list[0],key=(best||"-")+d+p+cls,anim=key!==last;last=key;
+  if(!best){
+    sign.className="sign off"+(anim?" anim":"");
+    sign.innerHTML=`<div class="k">Freies Zimmer</div><div class="n">Alles besetzt</div><div class="f">Gerade ist kein Zimmer frei.</div>`;
+    $("alt").innerHTML="";return;
+  }
+  sign.className="sign"+(anim?" anim":"");
+  sign.innerHTML=`<div class="k">Geht in</div><div class="n">${esc(best)}</div><div class="f">${esc(floorName(best[0]))} · frei bis ${esc(until(best))}</div>`;
+  const more=list.slice(1,6);
+  const groups=[];for(const r of more){const g=groups.find(x=>x.f===r[0]);g?g.r.push(r):groups.push({f:r[0],r:[r]})}
+  $("alt").innerHTML=more.length?`<p class="lab">Sonst frei</p><div class="alt">${groups.map(g=>`<span>${esc(floorName(g.f))}</span><b>${g.r.map(esc).join(" ")}</b>`).join("")}</div>`:"";
+}
+
+$("cls").innerHTML=Object.keys(D.cls).sort().map(c=>`<option${c===cls?" selected":""}>${esc(c)}</option>`).join("");
+$("cls").addEventListener("change",e=>{cls=e.target.value;try{localStorage.setItem("fz-cls",cls)}catch(err){}render()});
+render();
+const timer=setInterval(render,20000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+*.json
+!manifest.webmanifest
+*.pdf
+__pycache__/
