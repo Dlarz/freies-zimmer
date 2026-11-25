@@ -6,6 +6,7 @@ Zeigt mit einem Klick das nächste freie Zimmer, wenn ihr ausserhalb vom Schulzi
 - Empfiehlt zuerst ein freies Zimmer auf dem gleichen Stock (erste Ziffer = Stock), sonst ein Stock darüber oder darunter
 - Keine Zimmer im Zirkusplatz (Z) oder Ergänzungsbau (E)
 - Das Zimmer muss bis zum Ende der aktuellen Lektion frei sein
+- Bei Schwerpunktfach, Ergänzungsfach und Wahlfach fragt die App einmal nach dem Fach (und bei mehreren Gruppen: "In welchem Zimmer bist du meistens?") und merkt es sich
 
 Grundlage: Zimmerplan 1. Semester, Stand 5.11.2026. Inoffiziell: Prüfungen, kurzfristige Reservationen und abgeschlossene Türen kennt die App nicht.
 

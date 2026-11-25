@@ -41,15 +41,26 @@ main{max-width:520px;margin:0 auto;padding:22px 16px 28px;min-height:100%;displa
 .foot{margin-top:auto;border-top:1px solid var(--line);padding-top:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;color:var(--mute);font-size:14px}
 select{font:inherit;font-size:16px;font-weight:700;min-height:44px;padding:6px 10px;border:2px solid var(--ink);background:var(--bg);color:var(--ink);border-radius:0}
 select:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.ask{border:3px solid var(--ink);padding:14px 14px 16px}
+.ask p{margin:0 0 12px;font-weight:800;font-size:20px;line-height:1.2}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{font:inherit;font-size:17px;font-weight:800;min-height:48px;padding:6px 12px;border:2px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left;border-radius:0}
+.opt small{display:block;font-weight:400;font-size:13px;line-height:1.2;color:var(--mute)}
+.opt:hover{background:var(--ink);color:var(--bg)}.opt:hover small{color:var(--bg)}
+.opt:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.back{font:inherit;font-size:15px;background:none;border:0;color:var(--mute);text-decoration:underline;padding:10px 0 0;cursor:pointer}
+.set{display:flex;gap:10px 14px;flex-wrap:wrap;align-items:center}
+.set label{display:flex;gap:8px;align-items:center}
 @media(prefers-reduced-motion:no-preference){.sign.anim .n{animation:up .35s ease-out}@keyframes up{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}}
 </style>
 </head>
 <body>
 <main>
   <div><div class="when" id="when"></div><p class="where" id="where"></p></div>
+  <section class="ask" id="ask" hidden></section>
   <section class="sign" id="sign" aria-live="polite"></section>
   <div id="alt"></div>
-  <div class="foot"><label for="cls">Klasse <select id="cls"></select></label><span>Zimmerplan vom 5.11.2026</span></div>
+  <div class="foot"><div class="set"><label for="cls">Klasse <select id="cls"></select></label><span class="set" id="xsets"></span></div><span>Zimmerplan vom 5.11.2026</span></div>
 </main>
 <script>
 {
@@ -61,6 +72,36 @@ const mins=s=>{const[a,b]=s.split(":");return a*60+ +b};
 const floorName=f=>f==="0"?"Erdgeschoss":f+". Stock";
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KN={SF:"Schwerpunktfach",EF:"Ergänzungsfach",WF:"Wahlfach"};
+const SN={SBC:"Biologie & Chemie",SBG:"Bildnerisches Gestalten",SIT:"Italienisch",SMU:"Musik",SPM:"Physik & Anwendungen der Mathematik",SPP:"Philosophie, Pädagogik, Psychologie",SWR:"Wirtschaft & Recht",SSP:"Spanisch",SLA:"Latein",SGR:"Griechisch",EAM:"Anwendungen der Mathematik",EBG:"Bildnerisches Gestalten",EBI:"Biologie",ECH:"Chemie",EGG:"Geografie",EGS:"Geschichte",EIN:"Informatik",EPH:"Physik",EPP:"Pädagogik & Psychologie",ERE:"Religionslehre",ESP:"Sport",EWR:"Wirtschaft & Recht",EMU:"Musik",IN:"Informatik"};
+const get=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const put=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+const xOf=c=>c.replace(/[a-z]+$/,"X");
+// which room is this student in during an elective (Schwerpunktfach etc.)?
+function choice(key){
+  const F=D.fn[key],info=D.x[F.x][F.k],s=get(`fz-${F.x}-${F.k}`),g=get(`fz-${F.x}-${F.k}-g`);
+  const r={x:F.x,k:F.k,s};
+  if(!s||!info[s])return{...r,need:"subj"};
+  if(info[s].ask&&(g==null||!info[s].g[+g]))return{...r,need:"group"};
+  const os=F.o.filter(o=>o[0]===s);
+  if(!os.length)return{...r,none:true};
+  return{...r,rooms:(os.find(o=>o[1]===+g)||os[0])[2]};
+}
+function askHTML(c){
+  const info=D.x[c.x][c.k];
+  if(c.need==="subj")return `<p>Du hast jetzt ${esc(KN[c.k])}. Welches?</p><div class="opts">${Object.keys(info).sort().map(s=>`<button type="button" class="opt" data-x="${esc(c.x)}" data-k="${esc(c.k)}" data-s="${esc(s)}">${esc(s)}<small>${esc(SN[s]||"")}</small></button>`).join("")}</div>`;
+  return `<p>${esc(c.s)}: In welchem Zimmer bist du meistens?</p><div class="opts">${info[c.s].g.map((l,i)=>`<button type="button" class="opt" data-x="${esc(c.x)}" data-k="${esc(c.k)}" data-g="${i}">${esc(l)}</button>`).join("")}</div><button type="button" class="back" data-x="${esc(c.x)}" data-k="${esc(c.k)}" data-s="">Anderes Fach wählen</button>`;
+}
+let lastSets="";
+function renderSets(){
+  const x=xOf(cls),X=D.x[x];let h="";
+  if(X)for(const k of Object.keys(X)){
+    const s=get(`fz-${x}-${k}`),g=get(`fz-${x}-${k}-g`),info=X[k];
+    h+=`<label>${esc(KN[k])} <select data-x="${esc(x)}" data-k="${esc(k)}" data-r="s" aria-label="${esc(KN[k])}"><option value="">–</option>${Object.keys(info).sort().map(o=>`<option${o===s?" selected":""}>${esc(o)}</option>`).join("")}</select></label>`;
+    if(s&&info[s]&&info[s].ask)h+=`<label>Zimmer <select data-x="${esc(x)}" data-k="${esc(k)}" data-r="g" aria-label="${esc(KN[k])} Zimmer"><option value="">–</option>${info[s].g.map((l,i)=>`<option value="${i}"${String(i)===g?" selected":""}>${esc(l)}</option>`).join("")}</select></label>`;
+  }
+  if(h!==lastSets){$("xsets").innerHTML=h;lastSets=h}
+}
 let cls="G23v",last="";
 try{const v=localStorage.getItem("fz-cls");if(v&&D.cls[v])cls=v}catch(e){}
 
@@ -72,7 +113,9 @@ function slotNow(){
 }
 
 function render(){
+  renderSets();
   const n=new Date(),s=slotNow();
+  $("ask").hidden=true;
   const hm=n.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
   const sign=$("sign");
   if(!s){
@@ -87,9 +130,15 @@ function render(){
   // the class's current lesson block: same lesson continuing in the next periods
   const cur=C[base+p];
   let e=p;while(cur&&e+1<11&&C[base+e+1]===cur)e++;
-  const [shown,num]=cur?cur.split("|"):["",""];
+  let where=cur?"":`${cls} hat jetzt keine Lektion`,num="";
+  if(cur&&cur[0]==="#"){
+    const c=choice(cur.slice(1));
+    if(c.need){where=`${cls} hat jetzt ${KN[c.k]}`;$("ask").innerHTML=askHTML(c);$("ask").hidden=false}
+    else if(c.none)where=`${c.s} hat jetzt keine Lektion`;
+    else{where=`${c.s} ist in ${c.rooms.join(" oder ")}`;num=c.rooms.find(r=>/^[0-2]\d\d$/.test(r))||""}
+  }else if(cur){const q=cur.split("|");where=`${cls} ist in ${q[0]}`;num=q[1]}
   const from=num||D.cls[cls].h;
-  $("where").textContent=cur?`${cls} ist in ${shown}`:`${cls} hat jetzt keine Lektion`;
+  $("where").textContent=where;
   const fl=from[0],fn=+from;
   const freeAt=(r,i)=>D.busy[r][base+i]==="0";
   let list=ROOMS.filter(r=>{for(let i=p;i<=e;i++)if(!freeAt(r,i))return false;return true});
@@ -111,6 +160,18 @@ function render(){
 
 $("cls").innerHTML=Object.keys(D.cls).sort().map(c=>`<option${c===cls?" selected":""}>${esc(c)}</option>`).join("");
 $("cls").addEventListener("change",e=>{cls=e.target.value;try{localStorage.setItem("fz-cls",cls)}catch(err){}render()});
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button[data-k]");if(!b)return;
+  const key=`fz-${b.dataset.x}-${b.dataset.k}`;
+  if("s" in b.dataset){put(key,b.dataset.s||null);put(key+"-g",null)}
+  if("g" in b.dataset)put(key+"-g",b.dataset.g);
+  render();
+});
+$("xsets").addEventListener("change",e=>{
+  const t=e.target,key=`fz-${t.dataset.x}-${t.dataset.k}`;
+  if(t.dataset.r==="s"){put(key,t.value||null);put(key+"-g",null)}else put(key+"-g",t.value===""?null:t.value);
+  render();
+});
 render();
 const timer=setInterval(render,20000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
